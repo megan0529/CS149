@@ -137,14 +137,32 @@ public class ChatServer {
          else if (PAGE_REQUEST.matcher(request).matches()) {
             sendResponse(xo, OK, HTML, CHAT_HTML);
          }
+         
+         // PULL
          else if ((m = PULL_REQUEST.matcher(request)).matches()) {
             final String room = m.group(1);
             final long last = Long.valueOf(m.group(2));
             sendResponse(xo, OK, TEXT, getState(room).recentMessages(last));
          }
+         // PUSH
          else if ((m = PUSH_REQUEST.matcher(request)).matches()) {
             final String room = m.group(1);
             final String msg = m.group(2);
+            
+            // if (room.equals("all")) {
+            // getState(room).addMessage(msg);
+            // synchronized (stateByName) {
+            // for (String key: stateByName.keySet()) {
+            // if(key != "all") {
+            // getState(key).addMessage(msg);
+            // }
+            // }
+            // }
+            // else {
+            // getState(room).addMessage(msg);
+            // getState("all").addMessage(msg);
+            // }
+            
             getState(room).addMessage(msg);
             sendResponse(xo, OK, TEXT, "ack");
          }
