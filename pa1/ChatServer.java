@@ -10,6 +10,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.nio.charset.Charset;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -27,6 +28,7 @@ public class ChatServer {
    private static final Pattern         PUSH_REQUEST = Pattern.compile("POST /([^ /]+)/push\\?msg=([^ ]*) HTTP.*");
    
    private static final String          CHAT_HTML;
+   private static final int             NUM_THREAD   = 8;
    static {
       try {
          CHAT_HTML = getResourceAsString("chat.html");
@@ -38,6 +40,69 @@ public class ChatServer {
    private final int                    port;
    private final Map<String, ChatState> stateByName  = new HashMap<String, ChatState>();
    
+   private ThreadPool                   threadPool;
+   
+   private class TaskRunnable implements Runnable {
+      private Socket connSocket;
+      
+      public TaskRunnable(Socket _connSocket) {
+         connSocket = _connSocket;
+      }
+      
+      @Override
+      public void run() {
+         handle(connSocket);
+      }
+   };
+   
+   private class ThreadPool {
+      private int                  numThreads;
+      private LinkedList<Runnable> taskQueue;
+      private WorkerThread[]       threads;
+      
+      public ThreadPool(int _numThreads) {
+         numThreads = _numThreads;
+         taskQueue = new LinkedList<Runnable>();
+         threads = new WorkerThread[numThreads];
+         for (int i = 0; i < numThreads; i++) {
+            threads[i] = new WorkerThread();
+            threads[i].start();
+         }
+      }
+      
+      public void submit(Runnable task) {
+         synchronized (taskQueue) {
+            taskQueue.addLast(task);
+            taskQueue.notifyAll();
+         }
+      }
+      
+      // In order to let WorkerThread see the taskQueue, make the class inner
+      // class
+      private class WorkerThread extends Thread {
+         @Override
+         public void run() {
+            // an infinite while loop keeping scrutinizing if the task queue is
+            // empty. if not, pop out one task and let it run
+            Runnable r;
+            while (true) {
+               synchronized (taskQueue) {
+                  while (taskQueue.isEmpty()) {
+                     try {
+                        taskQueue.wait();
+                     } catch (InterruptedException e) {
+                        e.printStackTrace();
+                     }
+                  }
+                  r = taskQueue.pollFirst();
+               }
+               r.run();
+            }
+            
+         }
+      };
+   };
+   
    /**
     * Constructs a new {@link ChatServer} that will service requests on the
     * specified <code>port</code>. <code>state</code> will be used to hold the
@@ -45,13 +110,15 @@ public class ChatServer {
     */
    public ChatServer(final int port) throws IOException {
       this.port = port;
+      threadPool = new ThreadPool(NUM_THREAD);
    }
    
    public void runForever() throws Exception {
       final ServerSocket server = new ServerSocket(port);
       while (true) {
-         final Socket connection = server.accept();
-         handle(connection);
+         final Socket connSocket = server.accept();
+         TaskRunnable t = new TaskRunnable(connSocket);
+         threadPool.submit(t);
       }
    }
    
