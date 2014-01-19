@@ -179,12 +179,15 @@ public class ChatServer {
    }
    
    private ChatState getState(final String room) {
-      ChatState state = stateByName.get(room);
-      if (state == null) {
-         state = new ChatState(room);
-         stateByName.put(room, state);
+      System.out.println("room is " + room);
+      synchronized (stateByName) {
+         ChatState state = stateByName.get(room);
+         if (state == null) {
+            state = new ChatState(room);
+            stateByName.put(room, state);
+         }
+         return state;
       }
-      return state;
    }
    
    /**
