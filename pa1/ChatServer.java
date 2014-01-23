@@ -149,21 +149,21 @@ public class ChatServer {
             final String room = m.group(1);
             final String msg = m.group(2);
             
-            // if (room.equals("all")) {
-            // getState(room).addMessage(msg);
-            // synchronized (stateByName) {
-            // for (String key: stateByName.keySet()) {
-            // if(key != "all") {
-            // getState(key).addMessage(msg);
-            // }
-            // }
-            // }
-            // else {
-            // getState(room).addMessage(msg);
-            // getState("all").addMessage(msg);
-            // }
+             if (room.equals("all")) {
+            	 synchronized (stateByName) {
+                	 getState(room).addMessage(msg);
+            		 for (String key: stateByName.keySet()) {
+            			 if(!key.equals("all")) {
+            				 getState(key).addMessage(msg);
+            			 }
+            		 }
+            	 }
+             } else {
+            	 getState(room).addMessage(msg);
+            	 getState("all").addMessage(msg);
+             }
             
-            getState(room).addMessage(msg);
+            //getState(room).addMessage(msg);
             sendResponse(xo, OK, TEXT, "ack");
          }
          else {
