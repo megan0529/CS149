@@ -32,6 +32,7 @@ public class ChatState {
     * that they can return the newly posted messages.
     */
    public void addMessage(final String msg) {
+	  //Linked list is not synchronized and only one thread can update lastID
       synchronized (history) {
          history.addLast(msg);
          ++lastID;
@@ -39,7 +40,6 @@ public class ChatState {
             history.removeFirst();
          }
          history.notifyAll();
-         
       }
    }
    

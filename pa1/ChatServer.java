@@ -12,6 +12,7 @@ import java.nio.charset.Charset;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.Map;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -36,6 +37,7 @@ public class ChatServer {
          throw new Error("unable to start server", xx);
       }
    }
+   
    
    private final int                    port;
    private final Map<String, ChatState> stateByName  = new HashMap<String, ChatState>();
@@ -86,6 +88,7 @@ public class ChatServer {
             // empty. if not, pop out one task and let it run
             Runnable r;
             while (true) {
+               //Lock only the task queue
                synchronized (taskQueue) {
                   while (taskQueue.isEmpty()) {
                      try {
@@ -96,6 +99,7 @@ public class ChatServer {
                   }
                   r = taskQueue.pollFirst();
                }
+               
                r.run();
             }
             
@@ -149,17 +153,22 @@ public class ChatServer {
             final String room = m.group(1);
             final String msg = m.group(2);
             
-             if (room.equals("all")) {
+            //Create a room if it doesn't exist and add a message to it.
+       	 	getState(room).addMessage(msg);
+       	 	
+            if (room.equals("all")) {
+            	 //Lock the stateByName so that no new rooms can be added
+            	 //while we add msg from 'all'
             	 synchronized (stateByName) {
-                	 getState(room).addMessage(msg);
             		 for (String key: stateByName.keySet()) {
-            			 if(!key.equals("all")) {
+            			 if(!key.equals("all"))
             				 getState(key).addMessage(msg);
-            			 }
             		 }
             	 }
              } else {
-            	 getState(room).addMessage(msg);
+            	 //We assume that the first connection to 'all' room has to see the history
+            	 //If we start posting to all only when someone is connected to it, we 
+            	 //need to check that it was created.
             	 getState("all").addMessage(msg);
              }
             
@@ -198,14 +207,16 @@ public class ChatServer {
    
    private ChatState getState(final String room) {
       System.out.println("room is " + room);
-      synchronized (stateByName) {
-         ChatState state = stateByName.get(room);
-         if (state == null) {
-            state = new ChatState(room);
-            stateByName.put(room, state);
-         }
-         return state;
-      }
+      ChatState state = stateByName.get(room);
+      if (state == null) {
+    	  synchronized (stateByName) {
+    		  stateByName.put(room, new ChatState(room));
+    	  }
+    	  
+    	  return stateByName.get(room);
+      } else
+    	  return state;
+      
    }
    
    /**
