@@ -38,12 +38,16 @@ public class STMTreap implements IntSet {
    
    @Atomic
    public void add(final int key) {
-      root = addImpl(root, key);
+      final Node newRoot = addImpl(root, key);
+      if (root != newRoot)
+         root = newRoot;
    }
    
    @Atomic
    public void remove(final int key) {
-      root = removeImpl(root, key);
+      final Node newRoot = removeImpl(root, key);
+      if (root != newRoot)
+         root = newRoot;
    }
    
    @Atomic
