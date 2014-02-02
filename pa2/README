@@ -1,0 +1,86 @@
+CS 149 Programming Assignment 2 
+
+Song Han (songhan@stanford.edu)
+Artem
+
+
+There're two aspects of parallel speedup: single-threaded speed and scaling. We 
+emphasized on improving scaling by the following techniques:
+
+1. Avoiding unnecessary writes to shared data
+Since STM aborts whenever it finds read-write or write-write conflicts in the 
+read / write sets of two executing transactions, we should eliminate write set 
+as much as possible. In the Treap implementation, the original add(), remove(), 
+and contains() methods shall incur necessary writes to the passed in node even 
+if that node is unchanged. We modified this by reading the node first and compare
+if it has been changed. If unchanged, we could eliminate one write(incurred one
+more read, though, but read will generated less roll-back)
+
+2. Using nested @Atomic
+After eliminating all *synchronized* keywords, we guarded both the public 
+methods(add, remove, contains) and the recursive privated methods with @Atomic.
+In this way if a roll-back happens, it need not roll-back all the way to the 
+beginning of the coarse-grained transaction starting point, but the inner 
+transaction starting point. Thus lots of roll-back are eliminated. 
+
+
+3. Optimized for random number generator 
+The random number generator doesn't need to be protected by the transactional 
+atomicity. We used AtomicLong to achieve this. The compareAndSet method is 
+guarded by a while loop to ensure that *at most one* random value for each state 
+of the generator is generated. 
+
+
+The single-threaded speed could be improved by changing the recursive function 
+call to iterations and manually maintaining a node stack to do the heap fix-up, 
+since recursive function calls are slow. Since the performance already met the
+requirement, we didn't do this optimization. 
+
+
+
+
+We run our program in EC2, here're the results:
+1. No failed operation.
+2. Speed up scales linearly up to 8 threads
+3. STMTreap outperforms the single thread CoarseLockTreap for thread 8 and 16.
+
+
+
+
+Test run for 1000000 range,  5% read...
+   CoarseLockTreap,  1 threads:   1254479 operations/sec   1254479 operations/sec/thread
+   CoarseLockTreap,  2 threads:    484568 operations/sec    242284 operations/sec/thread
+   CoarseLockTreap,  4 threads:    606842 operations/sec    151711 operations/sec/thread
+   CoarseLockTreap,  8 threads:    509677 operations/sec     63710 operations/sec/thread
+   CoarseLockTreap, 16 threads:    604588 operations/sec     37787 operations/sec/thread
+          STMTreap,  1 threads:    288766 operations/sec    288766 operations/sec/thread
+          STMTreap,  2 threads:    477414 operations/sec    238707 operations/sec/thread
+          STMTreap,  4 threads:    846122 operations/sec    211531 operations/sec/thread
+          STMTreap,  8 threads:   1738150 operations/sec    217269 operations/sec/thread
+          STMTreap, 16 threads:   1369065 operations/sec     85567 operations/sec/thread
+Warming up...
+Test run for   10000 range, 95% read...
+   CoarseLockTreap,  1 threads:   4105709 operations/sec   4105709 operations/sec/thread
+   CoarseLockTreap,  2 threads:   1427403 operations/sec    713702 operations/sec/thread
+   CoarseLockTreap,  4 threads:   1846953 operations/sec    461738 operations/sec/thread
+   CoarseLockTreap,  8 threads:   1625722 operations/sec    203215 operations/sec/thread
+   CoarseLockTreap, 16 threads:   1662427 operations/sec    103902 operations/sec/thread
+          STMTreap,  1 threads:    876053 operations/sec    876053 operations/sec/thread
+          STMTreap,  2 threads:   1948214 operations/sec    974107 operations/sec/thread
+          STMTreap,  4 threads:   3184039 operations/sec    796010 operations/sec/thread
+          STMTreap,  8 threads:   5862236 operations/sec    732779 operations/sec/thread
+          STMTreap, 16 threads:   5165543 operations/sec    322846 operations/sec/thread
+Warming up...
+Test run for    1000 range, 99% read...
+   CoarseLockTreap,  1 threads:   7026971 operations/sec   7026971 operations/sec/thread
+   CoarseLockTreap,  2 threads:   2559489 operations/sec   1279744 operations/sec/thread
+   CoarseLockTreap,  4 threads:   3851143 operations/sec    962786 operations/sec/thread
+   CoarseLockTreap,  8 threads:   3603454 operations/sec    450432 operations/sec/thread
+   CoarseLockTreap, 16 threads:   3761972 operations/sec    235123 operations/sec/thread
+          STMTreap,  1 threads:   1939525 operations/sec   1939525 operations/sec/thread
+          STMTreap,  2 threads:   3561343 operations/sec   1780671 operations/sec/thread
+          STMTreap,  4 threads:   7032350 operations/sec   1758087 operations/sec/thread
+          STMTreap,  8 threads:  11608177 operations/sec   1451022 operations/sec/thread
+          STMTreap, 16 threads:  10389415 operations/sec    649338 operations/sec/thread
+
+
