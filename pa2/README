@@ -1,7 +1,7 @@
 CS 149 Programming Assignment 2 
 
 Song Han (songhan@stanford.edu)
-Artem
+Artem Vasilyev (tema8@stanford.edu)
 
 
 There're two aspects of parallel speedup: single-threaded speed and scaling. We 
@@ -11,17 +11,19 @@ emphasized on improving scaling by the following techniques:
 Since STM aborts whenever it finds read-write or write-write conflicts in the 
 read / write sets of two executing transactions, we should eliminate write set 
 as much as possible. In the Treap implementation, the original add(), remove(), 
-and contains() methods shall incur necessary writes to the passed in node even 
+and contains() methods will incur necessary writes to the passed in node even 
 if that node is unchanged. We modified this by reading the node first and compare
 if it has been changed. If unchanged, we could eliminate one write(incurred one
 more read, though, but read will generated less roll-back)
+In addition to the checks, we have declared the local variables as final to
+indicated that they will not be changed and to reduce the conflicts. 
 
 2. Using nested @Atomic
 After eliminating all *synchronized* keywords, we guarded both the public 
-methods(add, remove, contains) and the recursive privated methods with @Atomic.
+methods(add, remove, contains) and the recursive private methods with @Atomic.
 In this way if a roll-back happens, it need not roll-back all the way to the 
 beginning of the coarse-grained transaction starting point, but the inner 
-transaction starting point. Thus lots of roll-back are eliminated. 
+transaction starting point. Thus, long roll-back were eliminated. 
 
 
 3. Optimized for random number generator 

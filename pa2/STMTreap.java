@@ -88,13 +88,14 @@ public class STMTreap implements IntSet {
    private int randPriority() {
       // The constants in this 64-bit linear congruential random number
       // generator are from http://nuclear.llnl.gov/CNP/rng/rngman/node4.html
-      while (true) {
-         long old_rand = randState.get();
-         long new_rand = old_rand * 2862933555777941757L + 3037000493L;
-         if (randState.compareAndSet(old_rand, new_rand)) {
-            return (int) (new_rand >> 30);
-         }
+      boolean isSet = false;
+      long newRndState = 0;
+      while(!isSet) {
+    	  long currRndState = randState.get();
+    	  newRndState  = currRndState * 2862933555777941757L + 3037000493L;
+    	  isSet = randState.compareAndSet(currRndState, newRndState);
       }
+      return (int)(newRndState >> 30);
       
       // randState = randState * 2862933555777941757L + 3037000493L;
       // return (int) (randState >> 30);
