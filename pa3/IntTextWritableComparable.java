@@ -17,6 +17,12 @@ public class IntTextWritableComparable implements WritableComparable<IntTextWrit
 	   secondText = new Text();
 	}
 	
+	public IntTextWritableComparable(IntTextWritableComparable that) {
+      
+      firstInt = new IntWritable(that.getFirstInt().get());
+      secondText = new Text(that.getSecondText().toString());
+   }
+	
 	public IntTextWritableComparable(IntWritable firstInt, Text secondText) {
 	   this.firstInt = firstInt;
 	   this.secondText = secondText;
