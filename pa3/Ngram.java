@@ -36,17 +36,15 @@ import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 public class Ngram {
   
-   private static Set<String> queryNgramSet = new LinkedHashSet<String>();// 3-gram: word1_word2_word3
-   private static int n;
-   
+
    public static void main(String[] args) throws Exception {
       //    hadoop jar ngram.jar Ngram 4 query1.txt /wikipedia/8gb output
       //                               0 1          2              3
       Configuration conf = new Configuration();
       
 //      /*local mode for debugging*/
-conf.set("mapreduce.jobtracker.address", "local");
-conf.set("fs.defaultFS", "file:///");
+//conf.set("mapreduce.jobtracker.address", "local");
+//conf.set("fs.defaultFS", "file:///");
 //      /*local mode for debugging*/
       
       //delete the old output:
@@ -58,7 +56,7 @@ conf.set("fs.defaultFS", "file:///");
       conf.set("queryFile", args[1]);
       conf.set("xmlStart", "<page>");
       conf.set("xmlEnd", "</page>");
-      setupQuery(conf);
+//    setupQuery(conf);
       //setup job: 
       Job job = new Job(conf, "Ngram");
       job.setJarByClass(Ngram.class);
@@ -70,75 +68,84 @@ conf.set("fs.defaultFS", "file:///");
 
       job.setMapperClass(NgramMapper.class);
       job.setReducerClass(NgramReducer.class);
+      job.setNumReduceTasks(1);
 
       job.setInputFormatClass(XmlInputFormat.class);//self-implemented, extends TextInputFormat
       job.setOutputFormatClass(TextOutputFormat.class);
 
       FileInputFormat.addInputPath(job, new Path(args[2]));
       FileOutputFormat.setOutputPath(job, new Path(args[3]));
-
+      System.out.println("setup done=====!");
+      
       job.waitForCompletion(true);
    }
   
-   public static void setupQuery(Configuration conf) throws IOException, InterruptedException
-   {
-      n = conf.getInt("n", 0);
-      Path path = new Path(conf.get("queryFile"));//new Path("query1.txt")
-      FileSystem fs = path.getFileSystem(conf);
-      BufferedReader reader = new BufferedReader(new InputStreamReader(fs.open(path), "UTF-8"));
-      
-      StringBuilder sb = new StringBuilder();
-      String line;
-      while ((line = reader.readLine())!=null) {
-         sb.append(line+"\n");
-         System.out.println(line);
-      }
-      reader.close();
-      System.out.println("\n\n");
-      
-      Tokenizer tokenizer = new Tokenizer(sb.toString());
-      Deque<String> ngramList = new LinkedList<String>();
-      while(tokenizer.hasNext()) {
-         String token = tokenizer.next();
-         ngramList.addLast(token);
-         if(ngramList.size() > n) {
-            ngramList.removeFirst();
-         }
-         if (ngramList.size() == n) {
-            StringBuilder sb2 = new StringBuilder();
-            for(String s : ngramList) {
-               sb2.append(s);
-               sb2.append(",");
-            }
-            
-            queryNgramSet.add(sb2.toString());
-         }
-      }
-      
-      //print ngram
-      Iterator<String> iter = queryNgramSet.iterator();
-      int i=0;
-      while(iter.hasNext()) {
-         i++;
-         System.out.println("Ngram_"+i+"is:"+iter.next());
-      }
-      System.out.println("\n\n");  
-      //print end
-   }
-   
    // Mapper class
    public static class NgramMapper extends
          Mapper<LongWritable, Text, IntTextWritableComparable, IntWritable> {
 
-      private TreeSet<IntTextWritableComparable> resultToEmit = new TreeSet<IntTextWritableComparable>();
+      private static Set<String> queryNgramSet = new LinkedHashSet<String>();// 3-gram: word1_word2_word3
+      private static int n;
+      private static TreeSet<IntTextWritableComparable> resultToEmit = new TreeSet<IntTextWritableComparable>();
+      
+      public void setupQuery(Configuration conf) throws IOException, InterruptedException
+      {
+         n = conf.getInt("n", 0);
+         Path path = new Path(conf.get("queryFile"));//new Path("query1.txt")
+         FileSystem fs = path.getFileSystem(conf);
+         BufferedReader reader = new BufferedReader(new InputStreamReader(fs.open(path), "UTF-8"));
+         
+         StringBuilder sb = new StringBuilder();
+         String line;
+         while ((line = reader.readLine())!=null) {
+            sb.append(line+"\n");
+            System.out.println(line);
+         }
+         reader.close();
+         System.out.println("\n\n");
+         
+         Tokenizer tokenizer = new Tokenizer(sb.toString());
+         Deque<String> ngramList = new LinkedList<String>();
+         while(tokenizer.hasNext()) {
+            String token = tokenizer.next();
+            ngramList.addLast(token);
+            if(ngramList.size() > n) {
+               ngramList.removeFirst();
+            }
+            if (ngramList.size() == n) {
+               StringBuilder sb2 = new StringBuilder();
+               for(String s : ngramList) {
+                  sb2.append(s);
+                  sb2.append(",");
+               }
+               
+               queryNgramSet.add(sb2.toString());
+            }
+         }
+         
+         //print ngram
+         Iterator<String> iter = queryNgramSet.iterator();
+         int i=0;
+         while(iter.hasNext()) {
+            i++;
+            System.out.println("Ngram_"+i+"is:"+iter.next());
+         }
+         System.out.println("\n\n");  
+         //print end
+      }
+      
       
       @Override
       protected void setup(Context context) 
                throws IOException, InterruptedException{
          System.out.println("\n");
          super.setup(context);
+         Configuration conf = context.getConfiguration();
+         System.out.println("setup query!");
+         setupQuery(conf);
       }
 
+      
       @Override
       protected void map(LongWritable key, Text value, Context context) 
                throws IOException, InterruptedException {
@@ -179,7 +186,7 @@ conf.set("fs.defaultFS", "file:///");
          if(cnt > 0) {
             IntTextWritableComparable pair = new IntTextWritableComparable(new IntWritable(cnt), new Text(titleString));
             System.out.println("==>emit:"+pair.toString());
-//            context.write(pair, NullWritable.get());
+//            context.write(pair, new IntWritable(1));
             
             resultToEmit.add(pair);
             while(resultToEmit.size()>20) {
@@ -194,7 +201,7 @@ conf.set("fs.defaultFS", "file:///");
                throws IOException, InterruptedException {
          for (IntTextWritableComparable pair : resultToEmit) {
             System.out.println(pair.getFirstInt().toString()+", "+pair.getSecondText().toString());
-            context.write(new IntTextWritableComparable(pair), new IntWritable(1));
+            context.write(pair, new IntWritable(1));
          }
       
          
@@ -217,7 +224,6 @@ conf.set("fs.defaultFS", "file:///");
             context.write(count, title);
             writeCnt += 1;
          }
-      
       }
       
    }
