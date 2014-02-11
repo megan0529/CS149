@@ -62,6 +62,7 @@ public class Ngram {
 
       job.setMapperClass(NgramMapper.class);
       job.setReducerClass(NgramReducer.class);
+      job.setSortComparatorClass(LongWritable.DecreasingComparator.class);
 //      job.setNumReduceTasks(1);
 
       job.setInputFormatClass(XmlInputFormat.class);//self-implemented, extends TextInputFormat
