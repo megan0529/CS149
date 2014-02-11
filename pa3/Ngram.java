@@ -28,12 +28,6 @@ import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 
 
-
-
-
-
-
-
 public class Ngram {
   
 
@@ -61,14 +55,14 @@ public class Ngram {
       Job job = new Job(conf, "Ngram");
       job.setJarByClass(Ngram.class);
 
-      job.setMapOutputKeyClass(IntTextWritableComparable.class);// <(cnt, title), null>
-      job.setMapOutputValueClass(IntWritable.class); //consistant with Mapper<1,2,3,4>types
-      job.setOutputKeyClass(IntWritable.class);//cnt
+      job.setMapOutputKeyClass(LongWritable.class);// <(cnt, title), null>
+      job.setMapOutputValueClass(Text.class); //consistant with Mapper<1,2,3,4>types
+      job.setOutputKeyClass(LongWritable.class);//cnt
       job.setOutputValueClass(Text.class);//title
 
       job.setMapperClass(NgramMapper.class);
       job.setReducerClass(NgramReducer.class);
-      job.setNumReduceTasks(1);
+//      job.setNumReduceTasks(1);
 
       job.setInputFormatClass(XmlInputFormat.class);//self-implemented, extends TextInputFormat
       job.setOutputFormatClass(TextOutputFormat.class);
@@ -82,7 +76,7 @@ public class Ngram {
   
    // Mapper class
    public static class NgramMapper extends
-         Mapper<LongWritable, Text, IntTextWritableComparable, IntWritable> {
+         Mapper<LongWritable, Text, LongWritable, Text> {
 
       private static Set<String> queryNgramSet = new LinkedHashSet<String>();// 3-gram: word1_word2_word3
       private static int n;
@@ -187,6 +181,7 @@ public class Ngram {
             IntTextWritableComparable pair = new IntTextWritableComparable(new IntWritable(cnt), new Text(titleString));
             System.out.println("==>emit:"+pair.toString());
 //            context.write(pair, new IntWritable(1));
+            context.write(new LongWritable(cnt), new Text(titleString));
             
             resultToEmit.add(pair);
             while(resultToEmit.size()>20) {
@@ -196,34 +191,35 @@ public class Ngram {
          
       }
       
-      @Override
-      protected void cleanup(Context context) 
-               throws IOException, InterruptedException {
-         for (IntTextWritableComparable pair : resultToEmit) {
-            System.out.println(pair.getFirstInt().toString()+", "+pair.getSecondText().toString());
-            context.write(pair, new IntWritable(1));
-         }
-      
-         
-      }
+//      @Override
+//      protected void cleanup(Context context) 
+//               throws IOException, InterruptedException {
+//         for (IntTextWritableComparable pair : resultToEmit) {
+//            System.out.println(pair.getFirstInt().toString()+", "+pair.getSecondText().toString());
+//            context.write(pair, new IntWritable(1));
+//         }
+//      }
    
    }
       // Reducer Class
    public static class NgramReducer extends
-         Reducer<IntTextWritableComparable, IntWritable, IntWritable, Text> {
+         Reducer<LongWritable, Text, LongWritable, Text> {
 
       public static int writeCnt = 0;
 
       @Override
-      public void reduce(IntTextWritableComparable key, Iterable<IntWritable> values, Context context) 
+      public void reduce(LongWritable key, Iterable<Text> values, Context context) 
                throws IOException, InterruptedException {
-         System.out.println("-----receive:"+key.toString());
-         while(writeCnt < 20) {
-            IntWritable count = key.getFirstInt();
-            Text  title = key.getSecondText();
-            context.write(count, title);
-            writeCnt += 1;
-         }
+            for (Text value : values) {
+               if (writeCnt<20) {
+                  context.write(key, value);
+                  writeCnt +=1;
+               }
+            }
+//            System.out.println("-----receive:"+key.toString());
+//            IntWritable count = key.getFirstInt();
+//            Text  title = key.getSecondText();
+            
       }
       
    }
