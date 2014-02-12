@@ -7,6 +7,7 @@ import java.util.Deque;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import java.util.LinkedHashSet;
 import java.util.TreeSet;
@@ -26,6 +27,7 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
+
 
 
 public class Ngram {
@@ -50,6 +52,10 @@ public class Ngram {
       conf.set("queryFile", args[1]);
       conf.set("xmlStart", "<page>");
       conf.set("xmlEnd", "</page>");
+      
+
+ 
+      
 //    setupQuery(conf);
       //setup job: 
       Job job = new Job(conf, "Ngram");
@@ -64,6 +70,10 @@ public class Ngram {
       job.setReducerClass(NgramReducer.class);
       job.setSortComparatorClass(LongWritable.DecreasingComparator.class);
 //      job.setNumReduceTasks(1);
+      
+//      job.setProfileEnabled(true);
+//      job.setProfileParams("-agentlib:hprof=cpu=samples,heap=sites,depth=6,force=n,thread=y,verbose=n,file=%s");
+//      job.setProfileTaskRange(true, "0-2");
 
       job.setInputFormatClass(XmlInputFormat.class);//self-implemented, extends TextInputFormat
       job.setOutputFormatClass(TextOutputFormat.class);
@@ -79,7 +89,7 @@ public class Ngram {
    public static class NgramMapper extends
          Mapper<LongWritable, Text, LongWritable, Text> {
 
-      private static Set<String> queryNgramSet = new LinkedHashSet<String>();// 3-gram: word1_word2_word3
+      private static List<String> queryNgramSet = new LinkedList<String>();// 3-gram: word1_word2_word3
       private static int n;
       private static TreeSet<IntTextWritableComparable> resultToEmit = new TreeSet<IntTextWritableComparable>();
       
@@ -119,13 +129,13 @@ public class Ngram {
          }
          
          //print ngram
-         Iterator<String> iter = queryNgramSet.iterator();
-         int i=0;
-         while(iter.hasNext()) {
-            i++;
-            System.out.println("Ngram_"+i+"is:"+iter.next());
-         }
-         System.out.println("\n\n");  
+//         Iterator<String> iter = queryNgramSet.iterator();
+//         int i=0;
+//         while(iter.hasNext()) {
+//            i++;
+//            System.out.println("Ngram_"+i+"is:"+iter.next());
+//         }
+//         System.out.println("\n\n");  
          //print end
       }
       
@@ -133,37 +143,41 @@ public class Ngram {
       @Override
       protected void setup(Context context) 
                throws IOException, InterruptedException{
-         System.out.println("\n");
-         super.setup(context);
-         Configuration conf = context.getConfiguration();
-         System.out.println("setup query!");
-         setupQuery(conf);
+//         System.out.println("\n");
+//         super.setup(context);
+//         Configuration conf = context.getConfiguration();
+//         System.out.println("setup query!");
+//         setupQuery(conf);
       }
 
       
       @Override
       protected void map(LongWritable key, Text value, Context context) 
                throws IOException, InterruptedException {
-         String page = value.toString();
-         String titleString=null;
-//         System.out.println(page);
-         Pattern pattern = Pattern.compile("<title>(.*)</title>");
-         Matcher matcher = pattern.matcher(page);
-         if ((matcher.find()) && (matcher.groupCount() > 0)) {
-            titleString = matcher.group(1);
-//            System.out.println("::title:"+titleString);
-            page = page.substring(matcher.end());
-         }
-         if (titleString ==null) 
-            return;
          
+         context.write(key, value);
+         
+         if(false) {
+         String page = value.toString();
+         String titleString=new String("abc");
+////         System.out.println(page);
+//         Pattern pattern = Pattern.compile("<title>(.*)</title>");
+//         Matcher matcher = pattern.matcher(page);
+//         if ((matcher.find()) && (matcher.groupCount() > 0)) {
+//            titleString = matcher.group(1);
+////            System.out.println("::title:"+titleString);
+//            page = page.substring(matcher.end());
+//         }
+//         if (titleString ==null) 
+//            return;
+//         
          Tokenizer tokenizer = new Tokenizer(page);
          Deque<String> ngram = new LinkedList<String>();
          int cnt = 0;
          while (tokenizer.hasNext()){
             String tokenString = tokenizer.next();
             ngram.addLast(tokenString);
-            while (ngram.size() > n) {
+            if (ngram.size() > n) {
                ngram.removeFirst();
             }
             if(ngram.size()==n ) {
@@ -173,33 +187,21 @@ public class Ngram {
                   sb.append(i.next());
                   sb.append(",");
                }
-               if (queryNgramSet.contains(sb.toString())) {
-                  cnt +=1;
+               for (String s: queryNgramSet) {
+                  if (s.equals(sb.toString())){
+                     cnt +=1;
+                  }
                }
             }
          }
          if(cnt > 0) {
             IntTextWritableComparable pair = new IntTextWritableComparable(new IntWritable(cnt), new Text(titleString));
-            System.out.println("==>emit:"+pair.toString());
-//            context.write(pair, new IntWritable(1));
             context.write(new LongWritable(cnt), new Text(titleString));
-            
-            resultToEmit.add(pair);
-            while(resultToEmit.size()>20) {
-               resultToEmit.pollFirst();
-            }
+         }
          }
          
       }
-      
-//      @Override
-//      protected void cleanup(Context context) 
-//               throws IOException, InterruptedException {
-//         for (IntTextWritableComparable pair : resultToEmit) {
-//            System.out.println(pair.getFirstInt().toString()+", "+pair.getSecondText().toString());
-//            context.write(pair, new IntWritable(1));
-//         }
-//      }
+     
    
    }
       // Reducer Class

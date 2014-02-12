@@ -15,6 +15,9 @@ hadoop fs -put query1.txt .
 hadoop fs -put query2.txt .
 hadoop fs -rmr output
 hadoop jar ngram.jar Ngram 4 query1.txt /wikipedia/1gb output
+hadoop jar ngram.jar Ngram 4 query1.txt /wikipedia/2gb output
+hadoop jar ngram.jar Ngram 4 query1.txt /wikipedia/4gb output
+hadoop jar ngram.jar Ngram 4 query1.txt /wikipedia/8gb output
 rm -rf output
 hadoop fs -get output .
 cat output/part-*
