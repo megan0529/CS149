@@ -81,7 +81,6 @@ public class Ngram {
 
       private static Set<String> queryNgramSet = new LinkedHashSet<String>();// 3-gram: word1_word2_word3
       private static int n;
-      private static TreeSet<IntTextWritableComparable> resultToEmit = new TreeSet<IntTextWritableComparable>();
       
       public void setupQuery(Configuration conf) throws IOException, InterruptedException
       {
@@ -118,15 +117,6 @@ public class Ngram {
             }
          }
          
-         //print ngram
-         Iterator<String> iter = queryNgramSet.iterator();
-         int i=0;
-         while(iter.hasNext()) {
-            i++;
-            System.out.println("Ngram_"+i+"is:"+iter.next());
-         }
-         System.out.println("\n\n");  
-         //print end
       }
       
       
@@ -146,12 +136,12 @@ public class Ngram {
                throws IOException, InterruptedException {
          String page = value.toString();
          String titleString=null;
-//         System.out.println(page);
+         //System.out.println(page);
          Pattern pattern = Pattern.compile("<title>(.*)</title>");
          Matcher matcher = pattern.matcher(page);
          if ((matcher.find()) && (matcher.groupCount() > 0)) {
             titleString = matcher.group(1);
-//            System.out.println("::title:"+titleString);
+            //System.out.println("::title:"+titleString);
             page = page.substring(matcher.end());
          }
          if (titleString ==null) 
@@ -181,26 +171,10 @@ public class Ngram {
          if(cnt > 0) {
             IntTextWritableComparable pair = new IntTextWritableComparable(new IntWritable(cnt), new Text(titleString));
             System.out.println("==>emit:"+pair.toString());
-//            context.write(pair, new IntWritable(1));
             context.write(new LongWritable(cnt), new Text(titleString));
             
-            resultToEmit.add(pair);
-            while(resultToEmit.size()>20) {
-               resultToEmit.pollFirst();
-            }
          }
-         
       }
-      
-//      @Override
-//      protected void cleanup(Context context) 
-//               throws IOException, InterruptedException {
-//         for (IntTextWritableComparable pair : resultToEmit) {
-//            System.out.println(pair.getFirstInt().toString()+", "+pair.getSecondText().toString());
-//            context.write(pair, new IntWritable(1));
-//         }
-//      }
-   
    }
       // Reducer Class
    public static class NgramReducer extends
@@ -211,18 +185,15 @@ public class Ngram {
       @Override
       public void reduce(LongWritable key, Iterable<Text> values, Context context) 
                throws IOException, InterruptedException {
-            for (Text value : values) {
-               if (writeCnt<20) {
-                  context.write(key, value);
-                  writeCnt +=1;
-               }
-            }
-//            System.out.println("-----receive:"+key.toString());
-//            IntWritable count = key.getFirstInt();
-//            Text  title = key.getSecondText();
-            
+         TreeSet<String> strSet = new TreeSet<String>();
+         for (Text value : values) {
+            strSet.add(value.toString());
+         }
+         while(writeCnt < 20 && !strSet.isEmpty()) {
+            context.write(key, new Text(strSet.pollLast()));
+            writeCnt +=1; 
+         }
       }
-      
    }
    
    
