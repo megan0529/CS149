@@ -40,4 +40,5 @@ a tree structure ( like in merge sort ) in O( log P), because the height of
 binary tree is log P. All this stages are done one after another, so the resulting
 time for the algorithm is the sum of 3 stages or: O(q + n/P + logP)
 
-
+[Extra credit]
+We implemented the first extra credit to output top 20 matches
