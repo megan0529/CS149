@@ -50,7 +50,6 @@ public class Ngram {
       conf.set("queryFile", args[1]);
       conf.set("xmlStart", "<page>");
       conf.set("xmlEnd", "</page>");
-//    setupQuery(conf);
       //setup job: 
       Job job = new Job(conf, "Ngram");
       job.setJarByClass(Ngram.class);
@@ -169,8 +168,6 @@ public class Ngram {
             }
          }
          if(cnt > 0) {
-            IntTextWritableComparable pair = new IntTextWritableComparable(new IntWritable(cnt), new Text(titleString));
-            System.out.println("==>emit:"+pair.toString());
             context.write(new LongWritable(cnt), new Text(titleString));
             
          }

@@ -1,23 +1,5 @@
-/**
- * Licensed to the Apache Software Foundation (ASF) under one or more
- * contributor license agreements.  See the NOTICE file distributed with
- * this work for additional information regarding copyright ownership.
- * The ASF licenses this file to You under the Apache License, Version 2.0
- * (the "License"); you may not use this file except in compliance with
- * the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 
 import java.io.IOException;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -45,7 +27,6 @@ public class XmlInputFormat extends TextInputFormat {
     try {
       return new XmlRecordReader((FileSplit) split, context.getConfiguration());
     } catch (IOException ioe) {
-//      log.warn("Error while creating XmlRecordReader", ioe);
       return null;
     }
   }
@@ -70,7 +51,6 @@ public class XmlInputFormat extends TextInputFormat {
       startTag = conf.get(START_TAG_KEY).getBytes("utf-8");
       endTag = conf.get(END_TAG_KEY).getBytes("utf-8");
 
-      // open the file and seek to the start of the split
       start = split.getStart();
       end = start + split.getLength();
       Path file = split.getPath();
@@ -97,7 +77,6 @@ public class XmlInputFormat extends TextInputFormat {
 
     @Override
     public void close() throws IOException {
-//      Closeables.close(fsin, true);
       fsin.close();
     }
 
@@ -110,16 +89,13 @@ public class XmlInputFormat extends TextInputFormat {
       int i = 0;
       while (true) {
         int b = fsin.read();
-        // end of file:
         if (b == -1) {
           return false;
         }
-        // save to buffer:
         if (withinBlock) {
           buffer.write(b);
         }
 
-        // check if we're matching:
         if (b == match[i]) {
           i++;
           if (i >= match.length) {
@@ -128,7 +104,6 @@ public class XmlInputFormat extends TextInputFormat {
         } else {
           i = 0;
         }
-        // see if we've passed the stop point:
         if (!withinBlock && i == 0 && fsin.getPos() >= end) {
           return false;
         }
