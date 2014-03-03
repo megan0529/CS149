@@ -136,7 +136,14 @@ void cpu_ifftx(float *real_image, float *imag_image, int size_x, int size_y, flo
 	float reduction_RealOutBuffer;
 	float reduction_ImagOutBuffer;
 
+	int eightY = size_y / 8;
+	int eight7Y = size_y - eightY;
+	int eightX = size_x / 8;
+	int eight7X = size_x - eightX;
+
 	for (x = 0; x < size_x; x++) {
+//		if (x >= eightX && x < eight7X)
+//			break;
 
 		for (m = 0; m < size_y; m++) {
 			real_image_cp[m] = real_image[x * size_x + m];
@@ -153,16 +160,18 @@ void cpu_ifftx(float *real_image, float *imag_image, int size_x, int size_y, flo
 			reduction_ImagOutBuffer = 0.0f;
 
 			for (n = 0; n < size_y; n++) {
-				// Compute the frequencies for this index
-				float term = 2 * PI * y * n / size_y;
+				if (!(n >= eightY && n < eight7Y)) {
+					// Compute the frequencies for this index
+					float term = 2 * PI * y * n / size_y;
 //				fft_real = cos(term);
 //				fft_imag = sin(term);
 
-				fft_real = cos1[y * size_y + n];
-				fft_imag = -sin1[y * size_y + n];
+					fft_real = cos1[y * size_y + n];
+					fft_imag = -sin1[y * size_y + n];
 
-				reduction_RealOutBuffer += (real_image_cp[n] * fft_real) - (imag_image_cp[n] * fft_imag);
-				reduction_ImagOutBuffer += (imag_image_cp[n] * fft_real) + (real_image_cp[n] * fft_imag);
+					reduction_RealOutBuffer += (real_image_cp[n] * fft_real) - (imag_image_cp[n] * fft_imag);
+					reduction_ImagOutBuffer += (imag_image_cp[n] * fft_real) + (real_image_cp[n] * fft_imag);
+				}
 			}
 			// Incoporate the scaling factor here
 			realOutBuffer[y] = reduction_RealOutBuffer / size_y;
@@ -269,6 +278,8 @@ void cpu_iffty(float *real_image, float *imag_image, int size_x, int size_y, flo
 
 	float reduction_RealOutBuffer;
 	float reduction_ImagOutBuffer;
+	int eightX = size_x / 8;
+	int eight7X = size_x - eightX;
 
 	for (y = 0; y < size_y; y++) {
 
@@ -287,16 +298,18 @@ void cpu_iffty(float *real_image, float *imag_image, int size_x, int size_y, flo
 			reduction_ImagOutBuffer = 0.0f;
 
 			for (n = 0; n < size_y; n++) {
-				// Note that the negative sign goes away for the term
-				term = 2 * PI * x * n / size_x;
+				if (!(n >= eightX && n < eight7X)) {
+					// Note that the negative sign goes away for the term
+					term = 2 * PI * x * n / size_x;
 //				fft_real = cos(term);
 //				fft_imag = sin(term);
 
-				fft_real = cos3[x * size_x + n];
-				fft_imag = -sin3[x * size_x + n];
+					fft_real = cos3[x * size_x + n];
+					fft_imag = -sin3[x * size_x + n];
 
-				reduction_RealOutBuffer += (real_image_cp[n] * fft_real) - (imag_image_cp[n] * fft_imag);
-				reduction_ImagOutBuffer += (imag_image_cp[n] * fft_real) + (real_image_cp[n] * fft_imag);
+					reduction_RealOutBuffer += (real_image_cp[n] * fft_real) - (imag_image_cp[n] * fft_imag);
+					reduction_ImagOutBuffer += (imag_image_cp[n] * fft_real) + (real_image_cp[n] * fft_imag);
+				}
 			}
 			// Incorporate the scaling factor here
 			realOutBuffer[x] = reduction_RealOutBuffer / size_x;
