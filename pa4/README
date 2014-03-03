@@ -1,0 +1,16 @@
+Song Han (songhan)
+Artem 
+
+
+We employed the following ideas:
+1. OpenMP pragma: we parallized the middle for loop with dynamic scheduling, the
+chunk size is 4. 
+
+2. precalculating sin and cos: since the sin and cos calculation is the same for
+many loops, we precalculated them and stored in an array
+
+3. remove the filter. Since the filter is purely setting some matrix elements to
+zero, this is done at the fft stage. Also we eliminated some calculation in ifft
+since we know some elements are surely to be zero and no need to do calculation
+on them.
+
