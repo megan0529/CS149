@@ -3,6 +3,7 @@
 #include <sys/time.h>
 #include <stdio.h>
 #include <omp.h>
+#include <xmmintrin.h>
 
 #define PI 3.14159265
 #define CHUNK_SIZE 20
@@ -36,6 +37,59 @@ void precalculate(float *sin1, float *sin3, float *cos1, float *cos3, int size_x
 		}
 	}
 }
+
+
+
+static inline void calc_out_buffer(int size_y, int y, const float *cos1, const float
+		  *sin1, const float *real_image_cp, const float *imag_image_cp, 
+		  float *reduction_RealOutBuffer, float *reduction_ImagOutBuffer){
+
+  float a_RealOutBuffer[4], a_ImagOutBuffer[4];
+
+  __m128 v_fft_real, v_fft_image, v_real_image,
+	v_image_image, v_a, v_b;
+  __m128 v_real_out  = _mm_set_ps1(0.f);
+  __m128 v_image_out = _mm_set_ps1(0.f);
+
+  for (int n = 0; n < size_y; n+=128/32) {
+	v_fft_real    = _mm_load_ps(cos1 + n);
+	v_fft_image   = _mm_load_ps(sin1 + n);
+	v_real_image  = _mm_load_ps(real_image_cp + n);
+	v_image_image = _mm_load_ps(imag_image_cp + n);
+	//reduction_RealOutBuffer
+	v_a        = _mm_mul_ps(v_real_image , v_fft_real ); 
+	v_b        = _mm_mul_ps(v_image_image, v_fft_image);
+	v_real_out = _mm_add_ps(v_real_out,v_a);
+	v_real_out = _mm_sub_ps(v_real_out,v_b); 
+	//reduction_ImagOutBuffer
+	v_a         = _mm_mul_ps(v_image_image, v_fft_real); 
+	v_b         = _mm_mul_ps(v_real_image, v_fft_image);
+	v_image_out = _mm_add_ps(v_image_out,v_a);
+	v_image_out = _mm_add_ps(v_image_out,v_b); 
+
+
+	//fft_real = cos1[y * size_y + n];
+	//fft_imag = sin1[y * size_y + n];
+	//reduction_RealOutBuffer += (real_image_cp[n] * fft_real) - (imag_image_cp[n] * fft_imag);
+	//reduction_ImagOutBuffer += (imag_image_cp[n] * fft_real) + (real_image_cp[n] * fft_imag);
+  }
+  _mm_store_ps(a_RealOutBuffer, v_real_out);
+  _mm_store_ps(a_ImagOutBuffer, v_image_out);
+
+ for(int m = 1;m<4;m++){
+	a_RealOutBuffer[0] += a_RealOutBuffer[m];
+	a_ImagOutBuffer[0] += a_ImagOutBuffer[m];
+  }
+
+  *reduction_RealOutBuffer = a_RealOutBuffer[0];
+  *reduction_ImagOutBuffer = a_ImagOutBuffer[0];
+ 
+}
+
+
+
+
+
 //#pragma omp parallel for shared(sin1, cos1, size_y, size_x) private(y, n, term) collapse(2)
 
 //#pragma omp parallel for shared(sin1, cos1, size_y, size_x) private(x, n, term) collapse(2)
@@ -50,10 +104,10 @@ void cpu_fftx(float *real_image, float *imag_image, int size_x, int size_y, floa
 // Local values
 	float fft_real;
 	float fft_imag;
-	unsigned int n, m, x, y;
-	float term;
-	float *real_image_cp = new float[size_y];
-	float *imag_image_cp = new float[size_y];
+	unsigned int x, y;
+	//float term;
+	//float *real_image_cp = new float[size_y];
+	//float *imag_image_cp = new float[size_y];
 
 	float reduction_RealOutBuffer;
 	float reduction_ImagOutBuffer;
@@ -67,19 +121,20 @@ void cpu_fftx(float *real_image, float *imag_image, int size_x, int size_y, floa
   //								realOutBuffer, imagOutBuffer )		\
   //private(x, y, n, term, fft_real, fft_imag,reduction_RealOutBuffer,reduction_ImagOutBuffer )
 	for (x = 0; x < size_x; x++) {
-		for (m = 0; m < size_y; m++) {
+	/*	for (m = 0; m < size_y; m++) {
 			real_image_cp[m] = real_image[x * size_x + m];
 			imag_image_cp[m] = imag_image[x * size_x + m];
 		}
-
+*/
 #pragma omp parallel for shared(real_image, imag_image, size_x, size_y, x, \
-		realOutBuffer, imagOutBuffer, real_image_cp, imag_image_cp, eightY, eight7Y) \
-        private(y, n, term, fft_real, fft_imag,reduction_RealOutBuffer, \
+		realOutBuffer, imagOutBuffer, eightY, eight7Y) \
+        private(y, reduction_RealOutBuffer, \
         reduction_ImagOutBuffer) schedule(dynamic, 4)
 
 		for (y = 0; y < size_y; y++) {
 			if (!(y >= eightY && y < eight7Y)) {
-
+calc_out_buffer(size_y, y, cos1+y * size_y, sin1+y * size_y, real_image + x * size_x, imag_image + x * size_x, &reduction_RealOutBuffer, &reduction_ImagOutBuffer);
+/*
 				reduction_RealOutBuffer = 0.0f;
 				reduction_ImagOutBuffer = 0.0f;
 
@@ -93,7 +148,7 @@ void cpu_fftx(float *real_image, float *imag_image, int size_x, int size_y, floa
 					reduction_RealOutBuffer += (real_image_cp[n] * fft_real) - (imag_image_cp[n] * fft_imag);
 					reduction_ImagOutBuffer += (imag_image_cp[n] * fft_real) + (real_image_cp[n] * fft_imag);
 				}
-
+*/
 				realOutBuffer[y] = reduction_RealOutBuffer;
 				imagOutBuffer[y] = reduction_ImagOutBuffer;
 			}
@@ -113,8 +168,8 @@ void cpu_fftx(float *real_image, float *imag_image, int size_x, int size_y, floa
 // Reclaim some memory
 	delete[] realOutBuffer;
 	delete[] imagOutBuffer;
-	delete[] real_image_cp;
-	delete[] imag_image_cp;
+	//delete[] real_image_cp;
+	//delete[] imag_image_cp;
 }
 
 //222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222222
@@ -219,12 +274,13 @@ void cpu_ffty(float *real_image, float *imag_image, int size_x, int size_y, floa
 
 #pragma omp parallel for shared(real_image, imag_image, size_x, size_y, y, \
 		realOutBuffer, imagOutBuffer, real_image_cp, imag_image_cp) \
-        private(x, n, term, fft_real, fft_imag,reduction_RealOutBuffer, \
+        private(x, reduction_RealOutBuffer, \
         reduction_ImagOutBuffer) schedule(dynamic, 4)
 
 		for (x = 0; x < size_x; x++) {
 			if (!(x >= eightX && x < eight7X)) {
-
+calc_out_buffer(size_y, y, cos3+x * size_x, sin3+x * size_x, real_image_cp, imag_image_cp, &reduction_RealOutBuffer, &reduction_ImagOutBuffer);
+/*
 				reduction_RealOutBuffer = 0.0f;
 				reduction_ImagOutBuffer = 0.0f;
 
@@ -239,7 +295,7 @@ void cpu_ffty(float *real_image, float *imag_image, int size_x, int size_y, floa
 					reduction_RealOutBuffer += (real_image_cp[n] * fft_real) - (imag_image_cp[n] * fft_imag);
 					reduction_ImagOutBuffer += (imag_image_cp[n] * fft_real) + (real_image_cp[n] * fft_imag);
 				}
-
+*/
 				realOutBuffer[x] = reduction_RealOutBuffer;
 				imagOutBuffer[x] = reduction_ImagOutBuffer;
 			}

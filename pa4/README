@@ -14,3 +14,5 @@ zero, this is done at the fft stage. Also we eliminated some calculation in ifft
 since we know some elements are surely to be zero and no need to do calculation
 on them.
 
+4. Added SSE 2 instruction to vectorize internal loop
+
