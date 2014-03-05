@@ -1,5 +1,5 @@
 Song Han (songhan)
-Artem 
+Artem Vasilyev (tema8)
 
 
 We employed the following ideas:
@@ -16,3 +16,4 @@ on them.
 
 4. Added SSE 2 instruction to vectorize internal loop
 
+our result for the large picture 3167.266113ms

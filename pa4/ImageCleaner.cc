@@ -90,9 +90,6 @@ static inline void calc_out_buffer(int size_y, int y, const float *cos1, const f
 
 
 
-//#pragma omp parallel for shared(sin1, cos1, size_y, size_x) private(y, n, term) collapse(2)
-
-//#pragma omp parallel for shared(sin1, cos1, size_y, size_x) private(x, n, term) collapse(2)
 
 //111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
 //111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111
@@ -405,51 +402,6 @@ void cpu_filter(float *real_image, float *imag_image, int size_x, int size_y) {
 	}
 }
 
-void cpu_filter_1(float *real_image, float *imag_image, int size_x, int size_y) {
-	int eightX = size_x / 8;
-	int eight7X = size_x - eightX;
-	int eightY = size_y / 8;
-	int eight7Y = size_y - eightY;
-	unsigned int x;
-	unsigned int y;
-
-//#pragma omp parallel for shared(real_image, imag_image, size_x, size_y) private(x, y, eightX, eight7X, eightY, eight7Y)
-
-#pragma omp parallel shared(real_image, imag_image, eightX, eightY, \
-  							eight7X, size_x, eight7Y, size_y ) private(x,y)
-#pragma omp sections nowait
-	{
-#pragma omp section
-		{
-			for (x = eightX; x < eight7X; x++) {
-				for (y = 0; y < size_y; y++) {
-					real_image[y * size_x + x] = 0;
-					imag_image[y * size_x + x] = 0;
-				}
-			}
-		}
-
-#pragma omp section
-		{
-			for (x = 0; x < eightX; x++) {
-				for (y = eightY; y < eight7Y; y++) {
-					real_image[y * size_x + x] = 0;
-					imag_image[y * size_x + x] = 0;
-				}
-			}
-		}
-
-#pragma omp section
-		{
-			for (x = eight7X; x < size_x; x++) {
-				for (y = eightY; y < eight7Y; y++) {
-					real_image[y * size_x + x] = 0;
-					imag_image[y * size_x + x] = 0;
-				}
-			}
-		}
-	}
-}
 
 float imageCleaner(float *real_image, float *imag_image, int size_x, int size_y) {
 // These are used for timing
