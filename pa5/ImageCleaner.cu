@@ -7,7 +7,6 @@
 #define SIZEY    1024
 #endif
 #define BLOCK_SIZE 16
-#define PI 3.14159265
 
 typedef struct {
 	int size;
@@ -142,7 +141,7 @@ __global__ void iFT_Kernel(const Matrix realMatrix, const Matrix imagMatrix, con
 __global__ void sincosKernel(Matrix sinMatrix, Matrix cosMatrix) {
 	int row = blockIdx.y * BLOCK_SIZE + threadIdx.y;
 	int col = blockIdx.x * BLOCK_SIZE + threadIdx.x;
-	float angel = row * col * 2 * 3.1415926536 / sinMatrix.size;
+	float angel = row * col * 2 * 3.1415926536 / SIZEX;
 	//each thread is responsible for filling in only one entry
 	sinMatrix.elements[row * sinMatrix.size + col] = __sinf(angel);
 	cosMatrix.elements[row * cosMatrix.size + col] = __cosf(angel);
@@ -152,8 +151,8 @@ __global__ void sincosKernel(Matrix sinMatrix, Matrix cosMatrix) {
 __global__ void filterKernel(Matrix realMatrix, Matrix imagMatrix) {
 	int row = blockIdx.y * BLOCK_SIZE + threadIdx.y;
 	int col = blockIdx.x * BLOCK_SIZE + threadIdx.x;
-	int low8 = realMatrix.size / 8;
-	int high8 = realMatrix.size - low8;
+	int low8 = SIZEX / 8;
+	int high8 = SIZEX - low8;
 	if (!((row < low8 && col < low8) || (row < low8 && col >= high8) || (row >= high8 && col >= high8)
 			|| (row >= high8 && col < low8))) {
 		realMatrix.elements[row * realMatrix.size + col] = 0;
