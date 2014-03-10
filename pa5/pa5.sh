@@ -1,5 +1,5 @@
 #!/bin/sh
-
+cp ImageCleaner.cc ImageCleaner.cu
 # Compile
 make DEBUG=0 SIZEX=512 SIZEY=512 clean all
 

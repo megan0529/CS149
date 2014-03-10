@@ -24,8 +24,10 @@ void cpu_fftx(float *real_image, float *imag_image, int size_x, int size_y) {
 			float real_value = 0;
 			float imag_value = 0;
 			for (unsigned int n = 0; n < size_y; n++) {
-				real_value += (real_image[x * size_x + n] * fft_real[n]) - (imag_image[x * size_x + n] * fft_imag[n]);
-				imag_value += (imag_image[x * size_x + n] * fft_real[n]) + (real_image[x * size_x + n] * fft_imag[n]);
+				real_value += (real_image[x * size_x + n] * fft_real[n])
+						- (imag_image[x * size_x + n] * fft_imag[n]);
+				imag_value += (imag_image[x * size_x + n] * fft_real[n])
+						+ (real_image[x * size_x + n] * fft_imag[n]);
 			}
 
 			// Write the values back into the temporary buffer
@@ -68,8 +70,10 @@ void cpu_ifftx(float *real_image, float *imag_image, int size_x, int size_y) {
 			float real_value = 0;
 			float imag_value = 0;
 			for (unsigned int n = 0; n < size_y; n++) {
-				real_value += (real_image[x * size_x + n] * fft_real[n]) - (imag_image[x * size_x + n] * fft_imag[n]);
-				imag_value += (imag_image[x * size_x + n] * fft_real[n]) + (real_image[x * size_x + n] * fft_imag[n]);
+				real_value += (real_image[x * size_x + n] * fft_real[n])
+						- (imag_image[x * size_x + n] * fft_imag[n]);
+				imag_value += (imag_image[x * size_x + n] * fft_real[n])
+						+ (real_image[x * size_x + n] * fft_imag[n]);
 			}
 
 			// Write the values back into the temporary buffer
@@ -101,7 +105,7 @@ void cpu_ffty(float *real_image, float *imag_image, int size_x, int size_y) {
 			// Compute the local values
 			float *fft_real = new float[size_x];
 			float *fft_imag = new float[size_x];
-			for (unsigned int n = 0; n < size_y; n++) {
+			for (unsigned int n = 0; n < size_x; n++) {
 				float term = -2 * PI * x * n / size_x;
 				fft_real[n] = cos(term);
 				fft_imag[n] = sin(term);
@@ -111,8 +115,10 @@ void cpu_ffty(float *real_image, float *imag_image, int size_x, int size_y) {
 			float real_value = 0;
 			float imag_value = 0;
 			for (unsigned int n = 0; n < size_x; n++) {
-				real_value += (real_image[n * size_x + y] * fft_real[n]) - (imag_image[n * size_x + y] * fft_imag[n]);
-				imag_value += (imag_image[n * size_x + y] * fft_real[n]) + (real_image[n * size_x + y] * fft_imag[n]);
+				real_value += (real_image[n * size_x + y] * fft_real[n])
+						- (imag_image[n * size_x + y] * fft_imag[n]);
+				imag_value += (imag_image[n * size_x + y] * fft_real[n])
+						+ (real_image[n * size_x + y] * fft_imag[n]);
 			}
 
 			// Write the values back into the temporary buffer
@@ -155,8 +161,10 @@ void cpu_iffty(float *real_image, float *imag_image, int size_x, int size_y) {
 			float real_value = 0;
 			float imag_value = 0;
 			for (unsigned int n = 0; n < size_x; n++) {
-				real_value += (real_image[n * size_x + y] * fft_real[n]) - (imag_image[n * size_x + y] * fft_imag[n]);
-				imag_value += (imag_image[n * size_x + y] * fft_real[n]) + (real_image[n * size_x + y] * fft_imag[n]);
+				real_value += (real_image[n * size_x + y] * fft_real[n])
+						- (imag_image[n * size_x + y] * fft_imag[n]);
+				imag_value += (imag_image[n * size_x + y] * fft_real[n])
+						+ (real_image[n * size_x + y] * fft_imag[n]);
 			}
 
 			// Write the values back into the temporary buffer
@@ -186,7 +194,8 @@ void cpu_filter(float *real_image, float *imag_image, int size_x, int size_y) {
 	int eight7Y = size_y - eightY;
 	for (unsigned int x = 0; x < size_x; x++) {
 		for (unsigned int y = 0; y < size_y; y++) {
-			if (!(x < eightX && y < eightY) && !(x < eightX && y >= eight7Y) && !(x >= eight7Y && y < eightY)
+			if (!(x < eightX && y < eightY) && !(x < eightX && y >= eight7Y)
+					&& !(x >= eight7Y && y < eightY)
 					&& !(x >= eight7Y && y >= eight7Y)) {
 				// Zero out these values
 				real_image[y * size_x + x] = 0;
@@ -196,7 +205,8 @@ void cpu_filter(float *real_image, float *imag_image, int size_x, int size_y) {
 	}
 }
 
-float referenceCleaner(float *real_image, float *imag_image, int size_x, int size_y) {
+float referenceCleaner(float *real_image, float *imag_image, int size_x,
+		int size_y) {
 	// These are used for timing
 	struct timeval tv1, tv2;
 	struct timezone tz1, tz2;
@@ -216,7 +226,8 @@ float referenceCleaner(float *real_image, float *imag_image, int size_x, int siz
 	gettimeofday(&tv2, &tz2);
 
 	// Compute the time difference in micro-seconds
-	float execution = ((tv2.tv_sec - tv1.tv_sec) * 1000000 + (tv2.tv_usec - tv1.tv_usec));
+	float execution = ((tv2.tv_sec - tv1.tv_sec) * 1000000
+			+ (tv2.tv_usec - tv1.tv_usec));
 	// Convert to milli-seconds
 	execution /= 1000;
 	// Print some output
