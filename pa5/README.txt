@@ -1,4 +1,8 @@
+Song Han (songhan)
+Artem Vasilyev (tema8)
+
 We found that the discrete fourier transform of a picture is in fact the result of matrix multiplication: matrix A being the original picture, matrix B being the sin and cos matrix. So we implmented a kernel of matrix multiplication in cuda. We took advantage of shared memory by blocking the matrix. Thus the amount of memory access is equal to the (matrix width / block width).
+
 
 One thing to be noticed is that in the FT_Kernel the result has to be write to another place, instead of write back to the orignal place. This is due to the fact that other thread blocks might need this matrix data, so you can't overwirte it.
 
