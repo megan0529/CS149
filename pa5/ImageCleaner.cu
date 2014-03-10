@@ -44,8 +44,8 @@ __global__ void FT_Kernel(const Matrix realMatrix, const Matrix imagMatrix, cons
 	int blockRow = blockIdx.y;
 	int blockCol = blockIdx.x;
 	// the sub-matrix block this thread block is responsible for
-	Matrix subResultReal = getSubMatrix(resultRealMatrix, blockRow, blockCol);
-	Matrix subResultImag = getSubMatrix(resultImagMatrix, blockRow, blockCol);
+	Matrix subResultReal = getSubMatrix(resultRealMatrix, blockCol, blockRow);
+	Matrix subResultImag = getSubMatrix(resultImagMatrix, blockCol, blockRow);
 	//the sub-matrix entry this thread is responsible for
 	int row = threadIdx.y;
 	int col = threadIdx.x;
@@ -95,8 +95,8 @@ __global__ void iFT_Kernel(const Matrix realMatrix, const Matrix imagMatrix, con
 	int blockRow = blockIdx.y;
 	int blockCol = blockIdx.x;
 	// the sub-matrix block this thread block is responsible for
-	Matrix subResultReal = getSubMatrix(resultRealMatrix, blockRow, blockCol);
-	Matrix subResultImag = getSubMatrix(resultImagMatrix, blockRow, blockCol);
+	Matrix subResultReal = getSubMatrix(resultRealMatrix, blockCol, blockRow);
+	Matrix subResultImag = getSubMatrix(resultImagMatrix, blockCol, blockRow);
 	//the sub-matrix entry this thread is responsible for
 	int row = threadIdx.y;
 	int col = threadIdx.x;
@@ -144,8 +144,8 @@ __global__ void sincosKernel(Matrix sinMatrix, Matrix cosMatrix) {
 	int col = blockIdx.x * BLOCK_SIZE + threadIdx.x;
 	float angel = row * col * 2 * 3.1415926536 / sinMatrix.size;
 	//each thread is responsible for filling in only one entry
-	sinMatrix.elements[row * sinMatrix.stride + col] = __sinf(angel);
-	cosMatrix.elements[row * cosMatrix.stride + col] = __cosf(angel);
+	sinMatrix.elements[row * sinMatrix.size + col] = __sinf(angel);
+	cosMatrix.elements[row * cosMatrix.size + col] = __cosf(angel);
 
 }
 
