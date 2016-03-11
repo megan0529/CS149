@@ -1,4 +1,1 @@
-CS149
-=====
-
-Parallel Computing Projects
+CS149 Parallel Computing Projects
